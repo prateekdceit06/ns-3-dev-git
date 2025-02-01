@@ -154,12 +154,9 @@ The script performs multiple style checks. By default, the script runs the follo
 
 * Check code formatting using clang-format. Respects clang-format guards.
 * Check if local ``#include`` headers do not use the "ns3/" prefix. Respects clang-format guards.
-* Check if ns-3 ``#include`` headers use quotes (``""``) instead of angle brackets (``<>``). Respects clang-format guards.
-* Check if Doxygen tags use ``@`` rather than ``\\``. Respects clang-format guards.
 * Check if there are no trailing whitespace. Always checked.
 * Check if there are no tabs. Respects clang-format guards.
 * Check if source code files use SPDX licenses rather than GPL license text. Respects clang-format guards.
-* Check if files have the correct encoding (UTF-8). Always checked.
 
 The process returns a zero exit code if all files adhere to these rules.
 If there are files that do not comply with the rules, the process returns a non-zero
@@ -170,12 +167,8 @@ flags:
 
 * ``--no-formatting``
 * ``--no-include-prefixes``
-* ``--no-include-quotes``
-* ``--no-doxygen-tags``
 * ``--no-whitespace``
 * ``--no-tabs``
-* ``--no-licenses``
-* ``--no-encoding``
 
 Additional information about the formatting issues detected by the script can be enabled
 by adding the ``-v, --verbose`` flag.
@@ -687,7 +680,7 @@ is described in the `Doxygen website <https://www.doxygen.nl/index.html>`_.
   {
 
   /**
-   * @brief short one-line description of the purpose of your class
+   * \brief short one-line description of the purpose of your class
    *
    * A longer description of the purpose of your class after a blank
    * empty line.
@@ -700,8 +693,8 @@ is described in the `Doxygen website <https://www.doxygen.nl/index.html>`_.
       /**
        * A detailed description of the purpose of the method.
        *
-       * @param firstParam a short description of the purpose of this parameter
-       * @return a short description of what is returned from this function.
+       * \param firstParam a short description of the purpose of this parameter
+       * \return a short description of what is returned from this function.
        */
       int DoSomething(int firstParam);
 
@@ -777,7 +770,7 @@ For standard headers, use the C++ style of inclusion:
 
   .. sourcecode:: cpp
 
-    #include "ns3/header.h"
+    #include <ns3/header.h>
 
 - inside .cc files, use
 
@@ -789,7 +782,7 @@ For standard headers, use the C++ style of inclusion:
 
   .. sourcecode:: cpp
 
-    #include "ns3/header.h"
+    #include <ns3/header.h>
 
 Variables and constants
 =======================
@@ -929,10 +922,9 @@ Doxygen comments should use the C-style comment (also known as Javadoc) style.
 For comments that are intended to not be exposed publicly in the Doxygen output,
 use the ``@internal`` and ``@endinternal`` tags.
 Please use the ``@see`` tag for cross-referencing.
-All parameters and return values should be documented. The |ns3| codebase prefers
-the ``@`` character for tag identification. This character is recognized by clang-format
-as the start of Doxygen tags, which enables it to keep tags properly formatted;
-therefore please don't use ``\`` as the delimiter.
+All parameters and return values should be documented. The |ns3| codebase uses
+both the ``@`` or ``\`` characters for tag identification; please make sure
+that usage is consistent within a file.
 
 .. sourcecode:: cpp
 
@@ -944,7 +936,7 @@ therefore please don't use ``\`` as the delimiter.
       /**
        * Constructor.
        *
-       * @param n Number of elements.
+       * \param n Number of elements.
        */
       MyClass(int n);
   };
@@ -959,11 +951,11 @@ classes (e.g., all the classes in a module). E.g.;
 .. sourcecode:: cpp
 
   /**
-   * @defgroup mynewmodule This is a new module
+   * \defgroup mynewmodule This is a new module
    */
 
   /**
-   * @ingroup mynewmodule
+   * \ingroup mynewmodule
    *
    * MyClassOne description.
    */
@@ -972,7 +964,7 @@ classes (e.g., all the classes in a module). E.g.;
   };
 
   /**
-   * @ingroup mynewmodule
+   * \ingroup mynewmodule
    *
    * MyClassTwo description.
    */
@@ -985,22 +977,22 @@ In the tests for the module, it is suggested to add an ancillary group:
 .. sourcecode:: cpp
 
   /**
-   * @defgroup mynewmodule-test Tests for new module
-   * @ingroup mynewmodule
-   * @ingroup tests
+   * \defgroup mynewmodule-test Tests for new module
+   * \ingroup mynewmodule
+   * \ingroup tests
    */
 
   /**
-   * @ingroup mynewmodule-tests
-   * @brief MyNewModule Test
+   * \ingroup mynewmodule-tests
+   * \brief MyNewModule Test
    */
   class MyNewModuleTest : public TestCase
   {
   };
 
   /**
-   * @ingroup mynewmodule-tests
-   * @brief MyNewModule TestSuite
+   * \ingroup mynewmodule-tests
+   * \brief MyNewModule TestSuite
    */
   class MyNewModuleTestSuite : public TestSuite
   {
@@ -1009,7 +1001,7 @@ In the tests for the module, it is suggested to add an ancillary group:
   };
 
   /**
-   * @ingroup mynewmodule-tests
+   * \ingroup mynewmodule-tests
    * Static variable for test initialization
    */
   static MyNewModuleTestSuite g_myNewModuleTestSuite;
@@ -1137,8 +1129,8 @@ The general guidelines are as follows:
     /**
      * Receive packet from lower layer (passed to PHY as callback).
      *
-     * @param pkt Packet being received.
-     * @param txMode Mode of received packet.
+     * \param pkt Packet being received.
+     * \param txMode Mode of received packet.
      */
     void RxPacketGood(Ptr<Packet> pkt, double, UanTxMode txMode);
 
@@ -1825,77 +1817,3 @@ add the following configuration to ``.vscode/settings.json``:
       "pyproject.toml",
     ],
   }
-
-Markdown Lint
-*************
-
-.. _Markdownlint: https://github.com/markdownlint/markdownlint
-.. _Markdownlint Rules: https://github.com/markdownlint/markdownlint/blob/main/docs/RULES.md
-.. _Markdownlint Configuration Style File: https://github.com/markdownlint/markdownlint/blob/main/docs/creating_styles.md
-.. _Markdownlint Docker Hub: https://hub.docker.com/r/markdownlint/markdownlint
-.. _Markdownlint Docker Instructions: https://github.com/markdownlint/markdownlint/tree/main/tools/docker
-.. _Markdownlint VS Code Extension: https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint
-
-|ns3| uses `Markdownlint`_ as a linter of Markdown files.
-This linter checks if Markdown files follow a set of defined rules, in order to encourage
-standardization and consistency of Markdown files across parsers.
-It also ensures that Markdown files are correctly interpreted and rendered.
-
-Markdownlint detects linting issues, but it can not fix them automatically.
-The issues must be fixed manually.
-
-Markdownlint configuration
-==========================
-
-Markdownlint's settings are saved in the file ``.mdl_style.rb``.
-This file is defined in `Markdownlint Configuration Style File`_, which explains how to
-customize the tool to enable / disable rules or customize its parameters.
-
-The list of Markdown rules supported by Markdownlint is available in `Markdownlint Rules`_.
-
-Install and Run Markdownlint
-============================
-
-Markdownlint is written in Ruby. To run Markdownlint, either use the official
-Markdownlint Docker image or install Ruby and Markdownlint.
-
-Run Markdownlint with Docker image
-##################################
-
-Markdownlint has an official Docker image in `Markdownlint Docker Hub`_ with the tool
-and all dependencies installed.
-The instructions to use the Docker image are available in `Markdownlint Docker Instructions`_.
-
-To run Markdownlint in a Docker container, use the following command:
-
-.. sourcecode:: console
-
-  docker run -v .:/data markdownlint/markdownlint -s .mdl_style.rb .
-
-Install and Run Markdownlint with Ruby
-######################################
-
-To install Markdownlint natively, you need to have Ruby installed in your system.
-Check the installation instructions in the Ruby's official documentation.
-
-After installing Ruby in your system, install Markdownlint using the following command:
-
-.. sourcecode:: console
-
-  gem install mdl
-
-To run Markdownlint and check Markdown files for linting issues, run Markdownlint
-using the following command:
-
-.. sourcecode:: console
-
-  mdl -s .mdl_style.rb .
-
-VS Code Extension
-=================
-
-For VS Code users, the `Markdownlint VS Code Extension`_ extension is available in the marketplace.
-This extension is inspired in `Markdownlint`_ and follows the same set of rules.
-
-The Markdownlint extension automatically analyzes files open in the editor and provides inline hints
-when issues are detected. It can automatically fix most issues related with formatting.

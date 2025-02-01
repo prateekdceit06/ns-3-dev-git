@@ -6,7 +6,6 @@
  * Author: Sebastien Deronne <sebastien.deronne@gmail.com>
  */
 
-#include "ns3/attribute-container.h"
 #include "ns3/boolean.h"
 #include "ns3/command-line.h"
 #include "ns3/config.h"
@@ -32,7 +31,6 @@
 #include "ns3/yans-wifi-channel.h"
 #include "ns3/yans-wifi-helper.h"
 
-#include <algorithm>
 #include <functional>
 
 // This is a simple example in order to show how to configure an IEEE 802.11ax Wi-Fi network.
@@ -72,15 +70,12 @@ main(int argc, char* argv[])
     std::string dlAckSeqType{"NO-OFDMA"};
     bool enableUlOfdma{false};
     bool enableBsrp{false};
-    std::string mcsStr;
-    std::vector<uint64_t> mcsValues;
-    int channelWidth{-1};  // in MHz, -1 indicates an unset value
-    int guardInterval{-1}; // in nanoseconds, -1 indicates an unset value
+    int mcs{-1}; // -1 indicates an unset value
     uint32_t payloadSize =
         700; // must fit in the max TX duration when transmitting at MCS 0 over an RU of 26 tones
     std::string phyModel{"Yans"};
-    double minExpectedThroughput{0.0};
-    double maxExpectedThroughput{0.0};
+    double minExpectedThroughput{0};
+    double maxExpectedThroughput{0};
     Time accessReqInterval{0};
 
     CommandLine cmd(__FILE__);
@@ -112,18 +107,7 @@ main(int argc, char* argv[])
         "muSchedAccessReqInterval",
         "Duration of the interval between two requests for channel access made by the MU scheduler",
         accessReqInterval);
-    cmd.AddValue(
-        "mcs",
-        "list of comma separated MCS values to test; if unset, all MCS values (0-11) are tested",
-        mcsStr);
-    cmd.AddValue("channelWidth",
-                 "if set, limit testing to a specific channel width expressed in MHz (20, 40, 80 "
-                 "or 160 MHz)",
-                 channelWidth);
-    cmd.AddValue("guardInterval",
-                 "if set, limit testing to a specific guard interval duration expressed in "
-                 "nanoseconds (800, 1600 or 3200 ns)",
-                 guardInterval);
+    cmd.AddValue("mcs", "if set, limit testing to a specific MCS (0-11)", mcs);
     cmd.AddValue("payloadSize", "The application payload size in bytes", payloadSize);
     cmd.AddValue("phyModel",
                  "PHY model to use when OFDMA is disabled (Yans or Spectrum). If 80+80 MHz or "
@@ -184,51 +168,25 @@ main(int argc, char* argv[])
               << "GI"
               << "\t\t\t"
               << "Throughput" << '\n';
-    uint8_t minMcs = 0;
-    uint8_t maxMcs = 11;
-
-    if (mcsStr.empty())
+    int minMcs = 0;
+    int maxMcs = 11;
+    if (mcs >= 0 && mcs <= 11)
     {
-        for (uint8_t mcs = minMcs; mcs <= maxMcs; ++mcs)
-        {
-            mcsValues.push_back(mcs);
-        }
+        minMcs = mcs;
+        maxMcs = mcs;
     }
-    else
-    {
-        AttributeContainerValue<UintegerValue, ',', std::vector> attr;
-        auto checker = DynamicCast<AttributeContainerChecker>(MakeAttributeContainerChecker(attr));
-        checker->SetItemChecker(MakeUintegerChecker<uint8_t>());
-        attr.DeserializeFromString(mcsStr, checker);
-        mcsValues = attr.Get();
-        std::sort(mcsValues.begin(), mcsValues.end());
-    }
-
-    int minChannelWidth = 20;
-    int maxChannelWidth = frequency == 2.4 ? 40 : 160;
-    if (channelWidth >= minChannelWidth && channelWidth <= maxChannelWidth)
-    {
-        minChannelWidth = channelWidth;
-        maxChannelWidth = channelWidth;
-    }
-    int minGi = enableUlOfdma ? 1600 : 800;
-    int maxGi = 3200;
-    if (guardInterval >= minGi && guardInterval <= maxGi)
-    {
-        minGi = guardInterval;
-        maxGi = guardInterval;
-    }
-
-    for (const auto mcs : mcsValues)
+    for (int mcs = minMcs; mcs <= maxMcs; mcs++)
     {
         uint8_t index = 0;
         double previous = 0;
-        for (int width = minChannelWidth; width <= maxChannelWidth; width *= 2) // MHz
+        uint8_t maxChannelWidth = frequency == 2.4 ? 40 : 160;
+        int minGi = enableUlOfdma ? 1600 : 800;
+        for (int channelWidth = 20; channelWidth <= maxChannelWidth;) // MHz
         {
-            const auto is80Plus80 = (use80Plus80 && (width == 160));
-            const std::string widthStr = is80Plus80 ? "80+80" : std::to_string(width);
+            const auto is80Plus80 = (use80Plus80 && (channelWidth == 160));
+            const std::string widthStr = is80Plus80 ? "80+80" : std::to_string(channelWidth);
             const auto segmentWidthStr = is80Plus80 ? "80" : widthStr;
-            for (int gi = maxGi; gi >= minGi; gi /= 2) // Nanoseconds
+            for (int gi = 3200; gi >= minGi;) // Nanoseconds
             {
                 if (!udp)
                 {
@@ -399,8 +357,7 @@ main(int argc, char* argv[])
                 }
 
                 const auto maxLoad =
-                    HePhy::GetDataRate(mcs, MHz_u{static_cast<double>(width)}, NanoSeconds(gi), 1) /
-                    nStations;
+                    HePhy::GetDataRate(mcs, channelWidth, NanoSeconds(gi), 1) / nStations;
                 if (udp)
                 {
                     // UDP flow
@@ -409,8 +366,8 @@ main(int argc, char* argv[])
                     serverApp = server.Install(serverNodes.get());
                     streamNumber += server.AssignStreams(serverNodes.get(), streamNumber);
 
-                    serverApp.Start(Seconds(0));
-                    serverApp.Stop(simulationTime + Seconds(1));
+                    serverApp.Start(Seconds(0.0));
+                    serverApp.Stop(simulationTime + Seconds(1.0));
                     const auto packetInterval = payloadSize * 8.0 / maxLoad;
 
                     for (std::size_t i = 0; i < nStations; i++)
@@ -422,8 +379,8 @@ main(int argc, char* argv[])
                         ApplicationContainer clientApp = client.Install(clientNodes.Get(i));
                         streamNumber += client.AssignStreams(clientNodes.Get(i), streamNumber);
 
-                        clientApp.Start(Seconds(1));
-                        clientApp.Stop(simulationTime + Seconds(1));
+                        clientApp.Start(Seconds(1.0));
+                        clientApp.Stop(simulationTime + Seconds(1.0));
                     }
                 }
                 else
@@ -435,8 +392,8 @@ main(int argc, char* argv[])
                     serverApp = packetSinkHelper.Install(serverNodes.get());
                     streamNumber += packetSinkHelper.AssignStreams(serverNodes.get(), streamNumber);
 
-                    serverApp.Start(Seconds(0));
-                    serverApp.Stop(simulationTime + Seconds(1));
+                    serverApp.Start(Seconds(0.0));
+                    serverApp.Stop(simulationTime + Seconds(1.0));
 
                     for (std::size_t i = 0; i < nStations; i++)
                     {
@@ -453,14 +410,14 @@ main(int argc, char* argv[])
                         ApplicationContainer clientApp = onoff.Install(clientNodes.Get(i));
                         streamNumber += onoff.AssignStreams(clientNodes.Get(i), streamNumber);
 
-                        clientApp.Start(Seconds(1));
-                        clientApp.Stop(simulationTime + Seconds(1));
+                        clientApp.Start(Seconds(1.0));
+                        clientApp.Stop(simulationTime + Seconds(1.0));
                     }
                 }
 
                 Simulator::Schedule(Seconds(0), &Ipv4GlobalRoutingHelper::PopulateRoutingTables);
 
-                Simulator::Stop(simulationTime + Seconds(1));
+                Simulator::Stop(simulationTime + Seconds(1.0));
                 Simulator::Run();
 
                 // When multiple stations are used, there are chances that association requests
@@ -493,7 +450,7 @@ main(int argc, char* argv[])
                           << " Mbit/s" << std::endl;
 
                 // test first element
-                if (mcs == minMcs && width == 20 && gi == 3200)
+                if (mcs == minMcs && channelWidth == 20 && gi == 3200)
                 {
                     if (throughput * (1 + tolerance) < minExpectedThroughput)
                     {
@@ -502,7 +459,7 @@ main(int argc, char* argv[])
                     }
                 }
                 // test last element
-                if (mcs == maxMcs && width == maxChannelWidth && gi == 800)
+                if (mcs == maxMcs && channelWidth == maxChannelWidth && gi == 800)
                 {
                     if (maxExpectedThroughput > 0 &&
                         throughput > maxExpectedThroughput * (1 + tolerance))
@@ -538,7 +495,9 @@ main(int argc, char* argv[])
                     }
                 }
                 index++;
+                gi /= 2;
             }
+            channelWidth *= 2;
         }
     }
     return 0;

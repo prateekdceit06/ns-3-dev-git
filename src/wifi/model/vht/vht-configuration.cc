@@ -42,7 +42,8 @@ VhtConfiguration::GetTypeId()
             .AddAttribute("Support160MHzOperation",
                           "Whether or not 160 MHz operation is to be supported.",
                           BooleanValue(true),
-                          MakeBooleanAccessor(&VhtConfiguration::m_160MHzSupported),
+                          MakeBooleanAccessor(&VhtConfiguration::Get160MHzOperationSupported,
+                                              &VhtConfiguration::Set160MHzOperationSupported),
                           MakeBooleanChecker())
             .AddAttribute("SecondaryCcaSensitivityThresholds",
                           "Tuple {threshold for 20MHz PPDUs, threshold for 40MHz PPDUs, threshold "
@@ -82,17 +83,17 @@ VhtConfiguration::SetSecondaryCcaSensitivityThresholds(
     const SecondaryCcaSensitivityThresholds& thresholds)
 {
     NS_LOG_FUNCTION(this);
-    m_secondaryCcaSensitivityThresholds[MHz_u{20}] = std::get<0>(thresholds);
-    m_secondaryCcaSensitivityThresholds[MHz_u{40}] = std::get<1>(thresholds);
-    m_secondaryCcaSensitivityThresholds[MHz_u{80}] = std::get<2>(thresholds);
+    m_secondaryCcaSensitivityThresholds[20] = std::get<0>(thresholds);
+    m_secondaryCcaSensitivityThresholds[40] = std::get<1>(thresholds);
+    m_secondaryCcaSensitivityThresholds[80] = std::get<2>(thresholds);
 }
 
 VhtConfiguration::SecondaryCcaSensitivityThresholds
 VhtConfiguration::GetSecondaryCcaSensitivityThresholds() const
 {
-    return {m_secondaryCcaSensitivityThresholds.at(MHz_u{20}),
-            m_secondaryCcaSensitivityThresholds.at(MHz_u{40}),
-            m_secondaryCcaSensitivityThresholds.at(MHz_u{80})};
+    return {m_secondaryCcaSensitivityThresholds.at(20),
+            m_secondaryCcaSensitivityThresholds.at(40),
+            m_secondaryCcaSensitivityThresholds.at(80)};
 }
 
 const std::map<MHz_u, dBm_u>&

@@ -32,9 +32,14 @@ UdpEchoServer::GetTypeId()
 {
     static TypeId tid =
         TypeId("ns3::UdpEchoServer")
-            .SetParent<SinkApplication>()
+            .SetParent<Application>()
             .SetGroupName("Applications")
             .AddConstructor<UdpEchoServer>()
+            .AddAttribute("Port",
+                          "Port on which we listen for incoming packets.",
+                          UintegerValue(9),
+                          MakeUintegerAccessor(&UdpEchoServer::m_port),
+                          MakeUintegerChecker<uint16_t>())
             .AddAttribute("Tos",
                           "The Type of Service used to send IPv4 packets. "
                           "All 8 bits of the TOS byte are set (including ECN bits).",
@@ -53,9 +58,6 @@ UdpEchoServer::GetTypeId()
 }
 
 UdpEchoServer::UdpEchoServer()
-    : SinkApplication(DEFAULT_PORT),
-      m_socket{nullptr},
-      m_socket6{nullptr}
 {
     NS_LOG_FUNCTION(this);
 }
@@ -74,13 +76,9 @@ UdpEchoServer::StartApplication()
 
     if (!m_socket)
     {
-        auto tid = TypeId::LookupByName("ns3::UdpSocketFactory");
+        TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
         m_socket = Socket::CreateSocket(GetNode(), tid);
-        auto local = m_local;
-        if (local.IsInvalid())
-        {
-            local = InetSocketAddress(Ipv4Address::GetAny(), m_port);
-        }
+        InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), m_port);
         if (m_socket->Bind(local) == -1)
         {
             NS_FATAL_ERROR("Failed to bind socket");
@@ -98,36 +96,35 @@ UdpEchoServer::StartApplication()
                 NS_FATAL_ERROR("Error: Failed to join multicast group");
             }
         }
-        m_socket->SetIpTos(m_tos); // Affects only IPv4 sockets.
-        m_socket->SetRecvCallback(MakeCallback(&UdpEchoServer::HandleRead, this));
     }
 
-    if (m_local.IsInvalid() && !m_socket6)
+    if (!m_socket6)
     {
-        // local address is not specified, so create another socket to also listen to all IPv6
-        // addresses
-        auto tid = TypeId::LookupByName("ns3::UdpSocketFactory");
+        TypeId tid = TypeId::LookupByName("ns3::UdpSocketFactory");
         m_socket6 = Socket::CreateSocket(GetNode(), tid);
-        auto local = Inet6SocketAddress(Ipv6Address::GetAny(), m_port);
-        if (m_socket6->Bind(local) == -1)
+        Inet6SocketAddress local6 = Inet6SocketAddress(Ipv6Address::GetAny(), m_port);
+        if (m_socket6->Bind(local6) == -1)
         {
             NS_FATAL_ERROR("Failed to bind socket");
         }
-        if (addressUtils::IsMulticast(local))
+        if (addressUtils::IsMulticast(local6))
         {
             Ptr<UdpSocket> udpSocket = DynamicCast<UdpSocket>(m_socket6);
             if (udpSocket)
             {
                 // equivalent to setsockopt (MCAST_JOIN_GROUP)
-                udpSocket->MulticastJoinGroup(0, local);
+                udpSocket->MulticastJoinGroup(0, local6);
             }
             else
             {
                 NS_FATAL_ERROR("Error: Failed to join multicast group");
             }
         }
-        m_socket6->SetRecvCallback(MakeCallback(&UdpEchoServer::HandleRead, this));
     }
+
+    m_socket->SetIpTos(m_tos); // Affects only IPv4 sockets.
+    m_socket->SetRecvCallback(MakeCallback(&UdpEchoServer::HandleRead, this));
+    m_socket6->SetRecvCallback(MakeCallback(&UdpEchoServer::HandleRead, this));
 }
 
 void
@@ -152,10 +149,11 @@ UdpEchoServer::HandleRead(Ptr<Socket> socket)
 {
     NS_LOG_FUNCTION(this << socket);
 
+    Ptr<Packet> packet;
     Address from;
-    while (auto packet = socket->RecvFrom(from))
+    Address localAddress;
+    while ((packet = socket->RecvFrom(from)))
     {
-        Address localAddress;
         socket->GetSockName(localAddress);
         m_rxTrace(packet);
         m_rxTraceWithAddresses(packet, from, localAddress);

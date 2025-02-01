@@ -17,7 +17,7 @@ function(copy_headers_before_building_lib libname outputdir headers visibility)
 
     # If output directory does not exist, create it
     if(NOT (EXISTS ${outputdir}))
-      make_directory(${outputdir})
+      file(MAKE_DIRECTORY ${outputdir})
     endif()
 
     # If header already exists, skip symlinking/stub header creation
@@ -100,11 +100,6 @@ function(check_for_missing_libraries output_variable_name libraries)
       continue()
     endif()
 
-    # Match external imported targets out
-    if(lib MATCHES "^(ns3::)?[^:]+::.+$")
-      continue()
-    endif()
-
     # check if the example depends on disabled modules
     remove_lib_prefix("${lib}" lib)
 
@@ -130,13 +125,12 @@ endfunction()
 #
 # DEPRECATED_HEADER_FILES = "list;of;deprecated;.h;files", copy won't get triggered if DEPRECATED_HEADER_FILES isn't set
 # IGNORE_PCH = TRUE or FALSE, prevents the PCH from including undesired system libraries (e.g. custom GLIBC for DCE)
-# GENERATE_EXPORT_HEADER = TRUE or FALSE, auto-generate a header file to set *_EXPORT symbols for Windows builds
 # MODULE_ENABLED_FEATURES = "list;of;enabled;features;for;this;module" (used by fd-net-device)
 # cmake-format: on
 
 function(build_lib)
   # Argument parsing
-  set(options IGNORE_PCH GENERATE_EXPORT_HEADER)
+  set(options IGNORE_PCH)
   set(oneValueArgs LIBNAME)
   set(multiValueArgs
       SOURCE_FILES
@@ -173,36 +167,6 @@ function(build_lib)
   # Set alias
   add_library(ns3::${BLIB_LIBNAME} ALIAS ${BLIB_LIBNAME})
 
-  if(${BLIB_GENERATE_EXPORT_HEADER})
-    include(GenerateExportHeader)
-    string(TOUPPER "${BLIB_LIBNAME}" uppercase_libname)
-    string(
-      CONCAT force_undef_export
-             "\n// Undefine the *_EXPORT symbols for non-Windows based builds"
-             "\n#ifndef NS_MSVC"
-             "\n#undef ${uppercase_libname}_EXPORT"
-             "\n#define ${uppercase_libname}_EXPORT"
-             "\n#undef ${uppercase_libname}_NO_EXPORT"
-             "\n#define ${uppercase_libname}_NO_EXPORT"
-             "\n#endif"
-    )
-    generate_export_header(
-      ${BLIB_LIBNAME} EXPORT_FILE_NAME ${BLIB_LIBNAME}-export.h
-      CUSTOM_CONTENT_FROM_VARIABLE force_undef_export
-    )
-    set(export_file ${CMAKE_CURRENT_BINARY_DIR}/${BLIB_LIBNAME}-export.h)
-    set(export_dest ${CMAKE_HEADER_OUTPUT_DIRECTORY}/${BLIB_LIBNAME}-export.h)
-    file(COPY_FILE ${export_file} ${export_dest})
-    install(FILES ${export_file} DESTINATION include/ns3 COMPONENT Headers)
-
-    # In case building on Visual Studio
-    if(${MSVC})
-      target_compile_definitions(
-        ${BLIB_LIBNAME} PRIVATE ${BLIB_LIBNAME}_EXPORTS
-      )
-    endif()
-  endif()
-
   # Reuse PCH
   if(${PRECOMPILE_HEADERS_ENABLED} AND (NOT ${BLIB_IGNORE_PCH}))
     target_precompile_headers(${BLIB_LIBNAME} REUSE_FROM stdlib_pch)
@@ -215,12 +179,9 @@ function(build_lib)
       PUBLIC_HEADER
       "${BLIB_HEADER_FILES};${BLIB_DEPRECATED_HEADER_FILES};${CMAKE_HEADER_OUTPUT_DIRECTORY}/${BLIB_LIBNAME}-module.h"
       PRIVATE_HEADER "${BLIB_PRIVATE_HEADER_FILES}"
-      # set output directory for DLLs
-      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-      RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-      RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-      RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-      RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} # set output
+                                                                 # directory for
+                                                                 # DLLs
   )
 
   if(${NS3_CLANG_TIMETRACE})
@@ -266,10 +227,6 @@ function(build_lib)
   build_lib_tests(
     "${BLIB_LIBNAME}" "${BLIB_IGNORE_PCH}" "${FOLDER}" "${BLIB_TEST_SOURCES}"
   )
-
-  if(${MSVC})
-    target_link_options(${lib${BLIB_LIBNAME}} PUBLIC "/OPT:NOREF")
-  endif()
 
   # Handle package export
   install(
@@ -368,7 +325,7 @@ endfunction()
 
 function(build_lib_export_definitions_as_interface_definitions libname)
   get_target_property(target_definitions ${libname} COMPILE_DEFINITIONS)
-  if("${target_definitions}" STREQUAL "target_definitions-NOTFOUND")
+  if(${target_definitions} STREQUAL "target_definitions-NOTFOUND")
     set(target_definitions)
   endif()
   get_directory_property(dir_definitions COMPILE_DEFINITIONS)
@@ -453,10 +410,7 @@ endfunction()
 function(separate_ns3_from_non_ns3_libs libname libraries_to_link
          ns_libraries_to_link non_ns_libraries_to_link
 )
-  set(non_ns_libs)
-  if(DEFINED CMAKE_THREAD_LIBS_INIT)
-    list(APPEND non_ns_libs ${CMAKE_THREAD_LIBS_INIT})
-  endif()
+  set(non_ns_libs ${CMAKE_THREAD_LIBS_INIT})
   set(ns_libs)
   foreach(library ${libraries_to_link})
     remove_lib_prefix("${library}" module_name)

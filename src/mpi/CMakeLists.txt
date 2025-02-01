@@ -22,6 +22,6 @@ build_lib(
     model/mpi-receiver.h
     model/parallel-communication-interface.h
   LIBRARIES_TO_LINK ${libnetwork}
-                    MPI::MPI_CXX
+                    ${MPI_CXX_LIBRARIES}
   TEST_SOURCES ${example_as_test_suite}
 )

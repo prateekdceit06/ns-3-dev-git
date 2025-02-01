@@ -19,13 +19,13 @@
 #include "lr-wpan-mac-pl-headers.h"
 #include "lr-wpan-mac-trailer.h"
 
-#include "ns3/double.h"
-#include "ns3/log.h"
-#include "ns3/node.h"
-#include "ns3/packet.h"
-#include "ns3/random-variable-stream.h"
-#include "ns3/simulator.h"
-#include "ns3/uinteger.h"
+#include <ns3/double.h>
+#include <ns3/log.h>
+#include <ns3/node.h>
+#include <ns3/packet.h>
+#include <ns3/random-variable-stream.h>
+#include <ns3/simulator.h>
+#include <ns3/uinteger.h>
 
 #undef NS_LOG_APPEND_CONTEXT
 #define NS_LOG_APPEND_CONTEXT                                                                      \
@@ -76,7 +76,7 @@ operator<<(std::ostream& os, const MacState& state)
         break;
     }
     return os;
-}
+};
 
 TypeId
 LrWpanMac::GetTypeId()
@@ -252,14 +252,11 @@ LrWpanMac::LrWpanMac()
 
 LrWpanMac::~LrWpanMac()
 {
-    NS_LOG_FUNCTION(this);
 }
 
 void
 LrWpanMac::DoInitialize()
 {
-    NS_LOG_FUNCTION(this);
-
     if (m_macRxOnWhenIdle)
     {
         m_phy->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_RX_ON);
@@ -275,8 +272,6 @@ LrWpanMac::DoInitialize()
 void
 LrWpanMac::DoDispose()
 {
-    NS_LOG_FUNCTION(this);
-
     if (m_csmaCa)
     {
         m_csmaCa->Dispose();
@@ -296,7 +291,6 @@ LrWpanMac::DoDispose()
     }
     m_indTxQueue.clear();
 
-    m_uniformVar = nullptr;
     m_phy = nullptr;
     m_mcpsDataConfirmCallback = MakeNullCallback<void, McpsDataConfirmParams>();
     m_mcpsDataIndicationCallback = MakeNullCallback<void, McpsDataIndicationParams, Ptr<Packet>>();

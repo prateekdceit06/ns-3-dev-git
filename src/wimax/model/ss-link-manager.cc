@@ -273,8 +273,8 @@ SSLinkManager::StartContentionResolution()
 void
 SSLinkManager::PerformBackoff()
 {
-    Time deferTime;
-    Time timeToAllocation;
+    Time deferTime = Seconds(0);
+    Time timeToAllocation = Seconds(0);
     uint16_t nrPsPerRangOpp = m_ss->GetCurrentUcd().GetChannelEncodings().GetRangReqOppSize();
     uint16_t oppSize = m_ss->GetCurrentUcd().GetChannelEncodings().GetRangReqOppSize() /
                        m_ss->GetPhy()->GetPsPerSymbol();

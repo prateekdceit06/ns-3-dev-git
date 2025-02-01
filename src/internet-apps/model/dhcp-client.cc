@@ -145,10 +145,8 @@ int64_t
 DhcpClient::AssignStreams(int64_t stream)
 {
     NS_LOG_FUNCTION(this << stream);
-    auto currentStream = stream;
-    m_ran->SetStream(currentStream++);
-    currentStream += Application::AssignStreams(currentStream);
-    return (currentStream - stream);
+    m_ran->SetStream(stream);
+    return 1;
 }
 
 void
@@ -381,9 +379,9 @@ DhcpClient::Select()
 
     DhcpHeader header = m_offerList.front();
     m_offerList.pop_front();
-    m_lease = Seconds(header.GetLease());
-    m_renew = Seconds(header.GetRenew());
-    m_rebind = Seconds(header.GetRebind());
+    m_lease = Time(Seconds(header.GetLease()));
+    m_renew = Time(Seconds(header.GetRenew()));
+    m_rebind = Time(Seconds(header.GetRebind()));
     m_offeredAddress = header.GetYiaddr();
     m_myMask = Ipv4Mask(header.GetMask());
     m_server = header.GetDhcps();

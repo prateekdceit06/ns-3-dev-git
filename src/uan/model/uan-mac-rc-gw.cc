@@ -295,7 +295,7 @@ UanMacRcGw::StartCycle()
     // Calculate dataRate
     uint32_t totalBytes = 0;
     uint32_t totalFrames = 0;
-    Time pDelay;
+    Time pDelay = Seconds(0);
     if (numRts > 0)
     {
         auto rit = m_requests.begin();
@@ -472,7 +472,7 @@ UanMacRcGw::EndCycle()
 {
     NS_LOG_DEBUG(Now().As(Time::S) << " GW Ending cycle");
 
-    Time nextAck;
+    Time nextAck = Seconds(0);
 
     Time ackTime = Seconds(m_ackSize * 8.0 / m_phy->GetMode(m_currentRateNum).GetDataRateBps());
 

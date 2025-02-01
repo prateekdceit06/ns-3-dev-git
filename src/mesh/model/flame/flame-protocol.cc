@@ -120,7 +120,7 @@ FlameProtocol::GetTypeId()
 FlameProtocol::FlameProtocol()
     : m_address(Mac48Address()),
       m_broadcastInterval(Seconds(5)),
-      m_lastBroadcast(),
+      m_lastBroadcast(Seconds(0)),
       m_maxCost(32),
       m_myLastSeqno(1),
       m_rtable(CreateObject<FlameRtable>())
@@ -296,7 +296,8 @@ FlameProtocol::RemoveRoutingStuff(uint32_t fromIface,
     // Start PATH_UPDATE procedure if destination is our own address and last broadcast was sent
     // more than broadcast interval ago or was not sent at all
     if ((destination == GetAddress()) &&
-        ((m_lastBroadcast + m_broadcastInterval < Simulator::Now()) || m_lastBroadcast.IsZero()))
+        ((m_lastBroadcast + m_broadcastInterval < Simulator::Now()) ||
+         (m_lastBroadcast == Seconds(0))))
     {
         Ptr<Packet> packet = Create<Packet>();
         m_mp->Send(packet, Mac48Address::GetBroadcast(), 0);

@@ -19,7 +19,7 @@ namespace ns3
 {
 
 /**
- * @brief hold per-remote-station state for Ideal Wifi manager.
+ * \brief hold per-remote-station state for Ideal Wifi manager.
  *
  * This struct extends from WifiRemoteStation struct to hold additional
  * information required by the Ideal Wifi manager
@@ -89,11 +89,11 @@ IdealWifiManager::GetChannelWidthForNonHtMode(WifiMode mode) const
     if (mode.GetModulationClass() == WIFI_MOD_CLASS_DSSS ||
         mode.GetModulationClass() == WIFI_MOD_CLASS_HR_DSSS)
     {
-        return MHz_u{22};
+        return 22;
     }
     else
     {
-        return MHz_u{20};
+        return 20;
     }
 }
 
@@ -124,7 +124,7 @@ IdealWifiManager::BuildSnrThresholds()
     {
         for (const auto& mode : GetPhy()->GetMcsList())
         {
-            for (MHz_u j{20}; j <= GetPhy()->GetChannelWidth(); j *= 2)
+            for (MHz_u j = 20; j <= GetPhy()->GetChannelWidth(); j *= 2)
             {
                 txVector.SetChannelWidth(j);
                 if (mode.GetModulationClass() == WIFI_MOD_CLASS_HT)
@@ -134,21 +134,11 @@ IdealWifiManager::BuildSnrThresholds()
                     txVector.SetGuardInterval(guardInterval);
                     // derive NSS from the MCS index
                     nss = (mode.GetMcsValue() / 8) + 1;
+                    NS_LOG_DEBUG("Adding mode = " << mode.GetUniqueName() << " channel width " << j
+                                                  << " nss " << +nss << " GI " << guardInterval);
                     txVector.SetNss(nss);
                     txVector.SetMode(mode);
-                    if (txVector.IsValid(GetPhy()->GetPhyBand()))
-                    {
-                        NS_LOG_DEBUG("Adding mode = " << mode.GetUniqueName() << " channel width "
-                                                      << j << " nss " << +nss << " GI "
-                                                      << guardInterval);
-                        AddSnrThreshold(txVector, GetPhy()->CalculateSnr(txVector, m_ber));
-                    }
-                    else
-                    {
-                        NS_LOG_DEBUG("Skipping mode = " << mode.GetUniqueName() << " channel width "
-                                                        << j << " nss " << +nss << " GI "
-                                                        << guardInterval);
-                    }
+                    AddSnrThreshold(txVector, GetPhy()->CalculateSnr(txVector, m_ber));
                 }
                 else
                 {
@@ -166,21 +156,12 @@ IdealWifiManager::BuildSnrThresholds()
                     {
                         if (mode.IsAllowed(j, k))
                         {
+                            NS_LOG_DEBUG("Adding mode = " << mode.GetUniqueName()
+                                                          << " channel width " << j << " nss " << +k
+                                                          << " GI " << guardInterval);
                             txVector.SetNss(k);
                             txVector.SetMode(mode);
-                            if (txVector.IsValid(GetPhy()->GetPhyBand()))
-                            {
-                                NS_LOG_DEBUG("Adding mode = " << mode.GetUniqueName()
-                                                              << " channel width " << j << " nss "
-                                                              << +k << " GI " << guardInterval);
-                                AddSnrThreshold(txVector, GetPhy()->CalculateSnr(txVector, m_ber));
-                            }
-                            else
-                            {
-                                NS_LOG_DEBUG("Skipping mode = " << mode.GetUniqueName()
-                                                                << " channel width " << j << " nss "
-                                                                << +k << " GI " << guardInterval);
-                            }
+                            AddSnrThreshold(txVector, GetPhy()->CalculateSnr(txVector, m_ber));
                         }
                         else
                         {
@@ -243,11 +224,11 @@ IdealWifiManager::Reset(WifiRemoteStation* station) const
     NS_LOG_FUNCTION(this << station);
     auto st = static_cast<IdealWifiRemoteStation*>(station);
     st->m_lastSnrObserved = 0.0;
-    st->m_lastChannelWidthObserved = MHz_u{0};
+    st->m_lastChannelWidthObserved = 0;
     st->m_lastNssObserved = 1;
     st->m_lastSnrCached = CACHE_INITIAL_VALUE;
     st->m_lastMode = GetDefaultMode();
-    st->m_lastChannelWidth = MHz_u{0};
+    st->m_lastChannelWidth = 0;
     st->m_lastNss = 1;
 }
 
@@ -279,7 +260,7 @@ IdealWifiManager::DoReportRtsOk(WifiRemoteStation* st,
     auto station = static_cast<IdealWifiRemoteStation*>(st);
     station->m_lastSnrObserved = rtsSnr;
     station->m_lastChannelWidthObserved =
-        GetPhy()->GetChannelWidth() >= MHz_u{42} ? MHz_u{20} : GetPhy()->GetChannelWidth();
+        GetPhy()->GetChannelWidth() >= 40 ? 20 : GetPhy()->GetChannelWidth();
     station->m_lastNssObserved = 1;
 }
 

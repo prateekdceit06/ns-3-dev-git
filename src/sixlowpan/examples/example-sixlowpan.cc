@@ -102,8 +102,8 @@ main(int argc, char** argv)
     ping.SetAttribute("Size", UintegerValue(packetSize));
     ApplicationContainer apps = ping.Install(net1.Get(0));
 
-    apps.Start(Seconds(5));
-    apps.Stop(Seconds(15));
+    apps.Start(Seconds(5.0));
+    apps.Stop(Seconds(15.0));
 
     AsciiTraceHelper ascii;
     csma.EnableAsciiAll(ascii.CreateFileStream("example-sixlowpan.tr"));

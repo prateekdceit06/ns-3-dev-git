@@ -358,5 +358,4 @@ build_lib(
     ${libconfig-store}
   TEST_SOURCES ${test_sources}
   MODULE_ENABLED_FEATURES ${emu_features}
-  GENERATE_EXPORT_HEADER
 )

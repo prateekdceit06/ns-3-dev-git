@@ -146,7 +146,9 @@ Bug772ChainTest::CreateDevices()
                                  "DataMode",
                                  StringValue("OfdmRate6Mbps"),
                                  "RtsCtsThreshold",
-                                 StringValue("2200"));
+                                 StringValue("2200"),
+                                 "MaxSlrc",
+                                 UintegerValue(7));
     NetDeviceContainer devices = wifi.Install(wifiPhy, wifiMac, *m_nodes);
 
     // Assign fixed stream numbers to wifi and channel random variables
@@ -182,7 +184,7 @@ Bug772ChainTest::CreateDevices()
     m_sendSocket->Connect(InetSocketAddress(interfaces.GetAddress(m_size - 1), m_port));
     m_sendSocket->SetAllowBroadcast(true);
     Simulator::ScheduleWithContext(m_sendSocket->GetNode()->GetId(),
-                                   Seconds(1),
+                                   Seconds(1.0),
                                    &Bug772ChainTest::SendData,
                                    this,
                                    m_sendSocket);

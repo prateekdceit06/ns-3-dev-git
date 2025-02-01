@@ -49,7 +49,7 @@ WifiNetDevice::GetTypeId()
                           PointerValue(),
                           MakePointerAccessor(&WifiNetDevice::GetChannel),
                           MakePointerChecker<Channel>(),
-                          TypeId::SupportLevel::DEPRECATED,
+                          TypeId::DEPRECATED,
                           "class WifiNetDevice; use the Channel "
                           "attribute of WifiPhy")
             .AddAttribute("Phy",

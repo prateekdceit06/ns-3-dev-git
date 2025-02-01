@@ -34,7 +34,7 @@ GetGuardIntervalForMode(WifiMode mode, const Ptr<WifiNetDevice> device)
         Ptr<HtConfiguration> htConfiguration = device->GetHtConfiguration();
         NS_ASSERT(htConfiguration); // If HT/VHT modulation is used, we should have a HT
                                     // configuration attached
-        gi = NanoSeconds(htConfiguration->m_sgiSupported ? 400 : 800);
+        gi = NanoSeconds(htConfiguration->GetShortGuardIntervalSupported() ? 400 : 800);
     }
     return gi;
 }
@@ -56,7 +56,7 @@ GetGuardIntervalForMode(WifiMode mode, bool htShortGuardInterval, Time heGuardIn
 }
 
 WifiPreamble
-GetPreambleForTransmission(WifiModulationClass modulation, bool useShortPreamble /* = false */)
+GetPreambleForTransmission(WifiModulationClass modulation, bool useShortPreamble)
 {
     if (modulation == WIFI_MOD_CLASS_EHT)
     {
@@ -239,23 +239,22 @@ GetMaximumChannelWidth(WifiModulationClass modulation)
     {
     case WIFI_MOD_CLASS_DSSS:
     case WIFI_MOD_CLASS_HR_DSSS:
-        return MHz_u{22};
+        return 22;
     case WIFI_MOD_CLASS_OFDM:
     case WIFI_MOD_CLASS_ERP_OFDM:
-        return MHz_u{20};
+        return 20;
     case WIFI_MOD_CLASS_HT:
-        return MHz_u{40};
+        return 40;
     // NOLINTBEGIN(bugprone-branch-clone)
     case WIFI_MOD_CLASS_VHT:
     case WIFI_MOD_CLASS_HE:
-        return MHz_u{160};
+        return 160;
     case WIFI_MOD_CLASS_EHT:
-        return MHz_u{
-            160}; // TODO update when 320 MHz channels are supported and remove clang-tidy guards
+        return 160; // TODO update when 320 MHz channels are supported and remove clang-tidy guards
     // NOLINTEND(bugprone-branch-clone)
     default:
         NS_ABORT_MSG("Unknown modulation class: " << modulation);
-        return MHz_u{0};
+        return 0;
     }
 }
 
@@ -265,27 +264,27 @@ GetChannelWidthInMhz(WifiChannelWidthType width)
     switch (width)
     {
     case WifiChannelWidthType::UNKNOWN:
-        return MHz_u{0};
+        return 0;
     case WifiChannelWidthType::CW_20MHZ:
-        return MHz_u{20};
+        return 20;
     case WifiChannelWidthType::CW_22MHZ:
-        return MHz_u{22};
+        return 22;
     case WifiChannelWidthType::CW_5MHZ:
-        return MHz_u{5};
+        return 5;
     case WifiChannelWidthType::CW_10MHZ:
-        return MHz_u{10};
+        return 10;
     case WifiChannelWidthType::CW_40MHZ:
-        return MHz_u{40};
+        return 40;
     case WifiChannelWidthType::CW_80MHZ:
-        return MHz_u{80};
+        return 80;
     case WifiChannelWidthType::CW_160MHZ:
     case WifiChannelWidthType::CW_80_PLUS_80MHZ:
-        return MHz_u{160};
+        return 160;
     case WifiChannelWidthType::CW_2160MHZ:
-        return MHz_u{2160};
+        return 2160;
     default:
         NS_FATAL_ERROR("Unknown wifi channel width type " << width);
-        return MHz_u{0};
+        return 0;
     }
 }
 

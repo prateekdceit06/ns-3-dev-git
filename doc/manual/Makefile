@@ -1,6 +1,6 @@
 EPSTOPDF = epstopdf
 DIA = dia
-CONVERT = convert -density 300
+CONVERT = convert
 
 SRC = ../../src
 # Temporary source directory, for build

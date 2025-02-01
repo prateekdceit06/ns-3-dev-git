@@ -90,12 +90,9 @@ WifiDefaultAssocManager::DoStartScanning()
         for (uint8_t linkId = 0; linkId < m_mac->GetNLinks(); linkId++)
         {
             Simulator::Schedule(GetScanParams().probeDelay,
-                                &StaWifiMac::EnqueueProbeRequest,
+                                &StaWifiMac::SendProbeRequest,
                                 m_mac,
-                                m_mac->GetProbeRequest(linkId),
-                                linkId,
-                                Mac48Address::GetBroadcast(),
-                                Mac48Address::GetBroadcast());
+                                linkId);
         }
         m_probeRequestEvent =
             Simulator::Schedule(GetScanParams().probeDelay + GetScanParams().maxChannelTime,
@@ -196,7 +193,7 @@ WifiDefaultAssocManager::EndScanning()
             Mac48Address bssid = rnr->get().GetBssid(apIt->m_nbrApInfoId, apIt->m_tbttInfoFieldId);
             setupLinks.emplace_back(StaWifiMac::ApInfo::SetupLinksInfo{
                 linkId,
-                rnr->get().GetMldParameters(apIt->m_nbrApInfoId, apIt->m_tbttInfoFieldId).linkId,
+                rnr->get().GetLinkId(apIt->m_nbrApInfoId, apIt->m_tbttInfoFieldId),
                 bssid});
 
             if (needChannelSwitch)
@@ -209,10 +206,10 @@ WifiDefaultAssocManager::EndScanning()
                 // switch this link to using the channel used by a reported AP (or its primary80
                 // in case the reported AP is using a 160 MHz and the non-AP MLD does not support
                 // 160 MHz operations)
-                if (apChannel.GetTotalWidth() > MHz_u{80} &&
-                    !phy->GetDevice()->GetVhtConfiguration()->m_160MHzSupported)
+                if (apChannel.GetTotalWidth() > 80 &&
+                    !phy->GetDevice()->GetVhtConfiguration()->Get160MHzOperationSupported())
                 {
-                    apChannel = apChannel.GetPrimaryChannel(MHz_u{80});
+                    apChannel = apChannel.GetPrimaryChannel(80);
                 }
 
                 NS_LOG_DEBUG("Switch link " << +linkId << " to using " << apChannel);

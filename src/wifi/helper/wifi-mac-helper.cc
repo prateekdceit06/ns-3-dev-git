@@ -14,7 +14,6 @@
 #include "ns3/emlsr-manager.h"
 #include "ns3/enum.h"
 #include "ns3/frame-exchange-manager.h"
-#include "ns3/gcr-manager.h"
 #include "ns3/multi-user-scheduler.h"
 #include "ns3/pointer.h"
 #include "ns3/wifi-ack-manager.h"
@@ -133,10 +132,11 @@ WifiMacHelper::Create(Ptr<WifiNetDevice> device, WifiStandard standard) const
     mac->SetMacQueueScheduler(queueScheduler);
 
     // create and install the Multi User Scheduler if this is an HE AP
-    auto apMac = DynamicCast<ApWifiMac>(mac);
-    if (standard >= WIFI_STANDARD_80211ax && m_muScheduler.IsTypeIdSet() && apMac)
+    Ptr<ApWifiMac> apMac;
+    if (standard >= WIFI_STANDARD_80211ax && m_muScheduler.IsTypeIdSet() &&
+        (apMac = DynamicCast<ApWifiMac>(mac)))
     {
-        auto muScheduler = m_muScheduler.Create<MultiUserScheduler>();
+        Ptr<MultiUserScheduler> muScheduler = m_muScheduler.Create<MultiUserScheduler>();
         apMac->AggregateObject(muScheduler);
     }
 
@@ -166,13 +166,6 @@ WifiMacHelper::Create(Ptr<WifiNetDevice> device, WifiStandard standard) const
     {
         auto apEmlsrManager = m_apEmlsrManager.Create<ApEmlsrManager>();
         apMac->SetApEmlsrManager(apEmlsrManager);
-    }
-
-    // create and install the GCR Manager if this is a HT-capable AP
-    if (apMac && apMac->GetRobustAVStreamingSupported() && m_gcrManager.IsTypeIdSet())
-    {
-        auto gcrManager = m_gcrManager.Create<GcrManager>();
-        apMac->SetGcrManager(gcrManager);
     }
 
     return mac;

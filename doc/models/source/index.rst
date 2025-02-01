@@ -62,4 +62,3 @@ from the ``doc/`` directory of each module.  Source file column width is 100 col
    uan
    wifi
    wimax
-   zigbee

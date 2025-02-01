@@ -25,10 +25,8 @@
 #include "ns3/simulator.h"
 #include "ns3/wifi-mac.h"
 #include "ns3/wifi-phy.h"
-#include "ns3/wifi-psdu.h"
 
 #include <iomanip>
-#include <limits>
 
 #define Min(a, b) ((a < b) ? a : b)
 
@@ -377,9 +375,9 @@ MinstrelWifiManager::GetDataTxVector(MinstrelWifiRemoteStation* station)
 {
     NS_LOG_FUNCTION(this << station);
     auto channelWidth = GetChannelWidth(station);
-    if (channelWidth > MHz_u{20} && channelWidth != MHz_u{22})
+    if (channelWidth > 20 && channelWidth != 22)
     {
-        channelWidth = MHz_u{20};
+        channelWidth = 20;
     }
     if (!station->m_initialized)
     {
@@ -410,9 +408,9 @@ MinstrelWifiManager::GetRtsTxVector(MinstrelWifiRemoteStation* station)
     NS_LOG_FUNCTION(this << station);
     NS_LOG_DEBUG("DoGetRtsMode m_txrate=" << station->m_txrate);
     auto channelWidth = GetChannelWidth(station);
-    if (channelWidth > MHz_u{20} && channelWidth != MHz_u{22})
+    if (channelWidth > 20 && channelWidth != 22)
     {
-        channelWidth = MHz_u{20};
+        channelWidth = 20;
     }
     WifiMode mode;
     if (!GetUseNonErpProtection())
@@ -938,27 +936,6 @@ MinstrelWifiManager::DoGetRtsTxVector(WifiRemoteStation* st)
     return GetRtsTxVector(station);
 }
 
-std::list<Ptr<WifiMpdu>>
-MinstrelWifiManager::DoGetMpdusToDropOnTxFailure(WifiRemoteStation* station, Ptr<WifiPsdu> psdu)
-{
-    NS_LOG_FUNCTION(this << *psdu);
-
-    std::list<Ptr<WifiMpdu>> mpdusToDrop;
-
-    for (const auto& mpdu : *PeekPointer(psdu))
-    {
-        if (!DoNeedRetransmission(station,
-                                  mpdu->GetPacket(),
-                                  (mpdu->GetRetryCount() < GetMac()->GetFrameRetryLimit())))
-        {
-            // this MPDU needs to be dropped
-            mpdusToDrop.push_back(mpdu);
-        }
-    }
-
-    return mpdusToDrop;
-}
-
 bool
 MinstrelWifiManager::DoNeedRetransmission(WifiRemoteStation* st,
                                           Ptr<const Packet> packet,
@@ -1032,7 +1009,7 @@ MinstrelWifiManager::RateInit(MinstrelWifiRemoteStation* station)
         // Emulating minstrel.c::ath_rate_ctl_reset
         // We only check from 2 to 10 retries. This guarantee that
         // at least one retry is permitted.
-        Time totalTxTimeWithGivenRetries; // tx_time in minstrel.c
+        Time totalTxTimeWithGivenRetries = Seconds(0.0); // tx_time in minstrel.c
         NS_LOG_DEBUG(" Calculating the number of retries");
         for (uint32_t retries = 2; retries < 11; retries++)
         {

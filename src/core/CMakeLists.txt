@@ -2,6 +2,7 @@
 set(libraries_to_link)
 
 set(config_headers
+    ${CMAKE_HEADER_OUTPUT_DIRECTORY}/config-store-config.h
     ${CMAKE_HEADER_OUTPUT_DIRECTORY}/core-config.h
 )
 if(${ENABLE_BUILD_VERSION})

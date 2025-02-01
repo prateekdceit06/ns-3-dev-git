@@ -8,9 +8,8 @@
 
 #include "udp-client-server-helper.h"
 
-#include "ns3/address-utils.h"
-#include "ns3/string.h"
-#include "ns3/uinteger.h"
+#include <ns3/string.h>
+#include <ns3/uinteger.h>
 
 namespace ns3
 {
@@ -26,12 +25,6 @@ UdpServerHelper::UdpServerHelper(uint16_t port)
     SetAttribute("Port", UintegerValue(port));
 }
 
-UdpServerHelper::UdpServerHelper(const Address& address)
-    : UdpServerHelper()
-{
-    SetAttribute("Local", AddressValue(address));
-}
-
 UdpClientHelper::UdpClientHelper()
     : ApplicationHelper(UdpClient::GetTypeId())
 {
@@ -40,12 +33,13 @@ UdpClientHelper::UdpClientHelper()
 UdpClientHelper::UdpClientHelper(const Address& address)
     : UdpClientHelper()
 {
-    SetAttribute("Remote", AddressValue(address));
+    SetAttribute("RemoteAddress", AddressValue(address));
 }
 
 UdpClientHelper::UdpClientHelper(const Address& address, uint16_t port)
-    : UdpClientHelper(addressUtils::ConvertToSocketAddress(address, port))
+    : UdpClientHelper(address)
 {
+    SetAttribute("RemotePort", UintegerValue(port));
 }
 
 UdpTraceClientHelper::UdpTraceClientHelper()
@@ -56,15 +50,16 @@ UdpTraceClientHelper::UdpTraceClientHelper()
 UdpTraceClientHelper::UdpTraceClientHelper(const Address& address, const std::string& filename)
     : UdpTraceClientHelper()
 {
-    SetAttribute("Remote", AddressValue(address));
+    SetAttribute("RemoteAddress", AddressValue(address));
     SetAttribute("TraceFilename", StringValue(filename));
 }
 
 UdpTraceClientHelper::UdpTraceClientHelper(const Address& address,
                                            uint16_t port,
                                            const std::string& filename)
-    : UdpTraceClientHelper(addressUtils::ConvertToSocketAddress(address, port), filename)
+    : UdpTraceClientHelper(address, filename)
 {
+    SetAttribute("RemotePort", UintegerValue(port));
 }
 
 } // namespace ns3

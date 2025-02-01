@@ -967,7 +967,7 @@ BaseStationNetDevice::CreateDescriptorMessages(bool sendDcd, bool sendUcd)
 void
 BaseStationNetDevice::SendBursts()
 {
-    Time txTime;
+    Time txTime = Seconds(0);
     std::pair<OfdmDlMapIe*, Ptr<PacketBurst>> pair;
     WimaxPhy::ModulationType modulationType = WimaxPhy::MODULATION_TYPE_BPSK_12;
     std::list<std::pair<OfdmDlMapIe*, Ptr<PacketBurst>>>* downlinkBursts =

@@ -48,11 +48,8 @@ EpcPgwApplication::UeInfo::RemoveBearer(uint8_t bearerId)
 {
     NS_LOG_FUNCTION(this << (uint16_t)bearerId);
     auto it = m_teidByBearerIdMap.find(bearerId);
-    if (it != m_teidByBearerIdMap.end())
-    {
-        m_tftClassifier.Delete(it->second); // delete tft
-        m_teidByBearerIdMap.erase(bearerId);
-    }
+    m_tftClassifier.Delete(it->second); // delete tft
+    m_teidByBearerIdMap.erase(bearerId);
 }
 
 uint32_t

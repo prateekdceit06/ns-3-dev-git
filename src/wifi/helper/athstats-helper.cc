@@ -27,7 +27,7 @@ namespace ns3
 NS_LOG_COMPONENT_DEFINE("Athstats");
 
 AthstatsHelper::AthstatsHelper()
-    : m_interval(Seconds(1))
+    : m_interval(Seconds(1.0))
 {
 }
 
@@ -110,7 +110,7 @@ AthstatsWifiTraceSink::GetTypeId()
                             .AddConstructor<AthstatsWifiTraceSink>()
                             .AddAttribute("Interval",
                                           "Time interval between reports",
-                                          TimeValue(Seconds(1)),
+                                          TimeValue(Seconds(1.0)),
                                           MakeTimeAccessor(&AthstatsWifiTraceSink::m_interval),
                                           MakeTimeChecker());
     return tid;

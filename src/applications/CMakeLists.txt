@@ -7,6 +7,12 @@ build_lib(
     helper/three-gpp-http-helper.cc
     helper/udp-client-server-helper.cc
     helper/udp-echo-helper.cc
+    helper/quic-echo-helper.cc
+    helper/quic-client-server-helper.cc
+    model/quic-echo-client.cc
+    model/quic-echo-server.cc
+    model/quic-client.cc
+    model/quic-server.cc
     model/application-packet-probe.cc
     model/bulk-send-application.cc
     model/onoff-application.cc
@@ -15,8 +21,6 @@ build_lib(
     model/seq-ts-echo-header.cc
     model/seq-ts-header.cc
     model/seq-ts-size-header.cc
-    model/sink-application.cc
-    model/source-application.cc
     model/three-gpp-http-client.cc
     model/three-gpp-http-header.cc
     model/three-gpp-http-server.cc
@@ -33,6 +37,12 @@ build_lib(
     helper/three-gpp-http-helper.h
     helper/udp-client-server-helper.h
     helper/udp-echo-helper.h
+    helper/quic-echo-helper.h
+    helper/quic-client-server-helper.h
+    model/quic-echo-client.h
+    model/quic-echo-server.h
+    model/quic-client.h
+    model/quic-server.h
     model/application-packet-probe.h
     model/bulk-send-application.h
     model/onoff-application.h
@@ -41,8 +51,6 @@ build_lib(
     model/seq-ts-echo-header.h
     model/seq-ts-header.h
     model/seq-ts-size-header.h
-    model/sink-application.h
-    model/source-application.h
     model/three-gpp-http-client.h
     model/three-gpp-http-header.h
     model/three-gpp-http-server.h

@@ -11,10 +11,8 @@
 
 #include "qos-txop.h"
 
-#include "ap-wifi-mac.h"
 #include "channel-access-manager.h"
 #include "ctrl-headers.h"
-#include "gcr-manager.h"
 #include "mac-tx-middle.h"
 #include "mgt-action-headers.h"
 #include "mpdu-aggregator.h"
@@ -87,12 +85,7 @@ QosTxop::GetTypeId()
             .AddTraceSource("TxopTrace",
                             "Trace source for TXOP start and duration times",
                             MakeTraceSourceAccessor(&QosTxop::m_txopTrace),
-                            "ns3::QosTxop::TxopTracedCallback")
-            .AddTraceSource("BaEstablished",
-                            "A block ack agreement is established with the given recipient for "
-                            "the given TID.",
-                            MakeTraceSourceAccessor(&QosTxop::m_baEstablishedCallback),
-                            "ns3::QosTxop::BaEstablishedCallback");
+                            "ns3::QosTxop::TxopTracedCallback");
     return tid;
 }
 
@@ -288,17 +281,15 @@ QosTxop::GetBaManager()
 }
 
 uint16_t
-QosTxop::GetBaBufferSize(Mac48Address address, uint8_t tid, bool isGcr) const
+QosTxop::GetBaBufferSize(Mac48Address address, uint8_t tid) const
 {
-    return isGcr ? m_baManager->GetGcrBufferSize(address, tid)
-                 : m_baManager->GetRecipientBufferSize(address, tid);
+    return m_baManager->GetRecipientBufferSize(address, tid);
 }
 
 uint16_t
-QosTxop::GetBaStartingSequence(Mac48Address address, uint8_t tid, bool isGcr) const
+QosTxop::GetBaStartingSequence(Mac48Address address, uint8_t tid) const
 {
-    return isGcr ? m_baManager->GetGcrStartingSequence(address, tid)
-                 : m_baManager->GetOriginatorStartingSequence(address, tid);
+    return m_baManager->GetOriginatorStartingSequence(address, tid);
 }
 
 std::pair<CtrlBAckRequestHeader, WifiMacHeader>
@@ -390,10 +381,7 @@ QosTxop::PeekNextMpdu(uint8_t linkId, uint8_t tid, Mac48Address recipient, Ptr<c
         {
             return m_queue->PeekFirstAvailable(linkId, mpdu);
         }
-        WifiContainerQueueId queueId(WIFI_QOSDATA_QUEUE,
-                                     recipient.IsGroup() ? WIFI_GROUPCAST : WIFI_UNICAST,
-                                     recipient,
-                                     tid);
+        WifiContainerQueueId queueId(WIFI_QOSDATA_QUEUE, WIFI_UNICAST, recipient, tid);
         if (auto mask = m_mac->GetMacQueueScheduler()->GetQueueLinkMask(m_ac, queueId, linkId);
             mask && mask->none())
         {
@@ -438,25 +426,13 @@ QosTxop::PeekNextMpdu(uint8_t linkId, uint8_t tid, Mac48Address recipient, Ptr<c
                 break;
             }
 
-            if (item->GetHeader().IsQosData())
+            // if no BA agreement, we cannot have multiple MPDUs in-flight
+            if (item->GetHeader().IsQosData() &&
+                !m_mac->GetBaAgreementEstablishedAsOriginator(item->GetHeader().GetAddr1(),
+                                                              item->GetHeader().GetQosTid()))
             {
-                auto apMac = DynamicCast<ApWifiMac>(m_mac);
-                const auto isGcr = IsGcr(m_mac, item->GetHeader());
-                const auto agreementEstablished =
-                    isGcr
-                        ? apMac->IsGcrBaAgreementEstablishedWithAllMembers(
-                              item->GetHeader().GetAddr1(),
-                              item->GetHeader().GetQosTid())
-                        : m_mac
-                              ->GetBaAgreementEstablishedAsOriginator(item->GetHeader().GetAddr1(),
-                                                                      item->GetHeader().GetQosTid())
-                              .has_value();
-                // if no BA agreement, we cannot have multiple MPDUs in-flight
-                if (!agreementEstablished)
-                {
-                    NS_LOG_DEBUG("No BA agreement and an MPDU is already in-flight");
-                    return nullptr;
-                }
+                NS_LOG_DEBUG("No BA agreement and an MPDU is already in-flight");
+                return nullptr;
             }
 
             NS_LOG_DEBUG("Skipping in flight MPDU: " << *item);
@@ -481,24 +457,21 @@ QosTxop::PeekNextMpdu(uint8_t linkId, uint8_t tid, Mac48Address recipient, Ptr<c
         return nullptr;
     }
 
-    auto& hdr = item->GetHeader();
+    WifiMacHeader& hdr = item->GetHeader();
 
     // peek the next sequence number and check if it is within the transmit window
     // in case of QoS data frame
-    const auto sequence = item->HasSeqNoAssigned() ? hdr.GetSequenceNumber()
-                                                   : m_txMiddle->PeekNextSequenceNumberFor(&hdr);
+    uint16_t sequence = item->HasSeqNoAssigned() ? hdr.GetSequenceNumber()
+                                                 : m_txMiddle->PeekNextSequenceNumberFor(&hdr);
     if (hdr.IsQosData())
     {
-        const auto recipient = hdr.GetAddr1();
-        const auto tid = hdr.GetQosTid();
-        const auto isGcr = IsGcr(m_mac, hdr);
-        const auto bufferSize = GetBaBufferSize(recipient, tid, isGcr);
-        const auto startSeq = GetBaStartingSequence(recipient, tid, isGcr);
-        auto apMac = DynamicCast<ApWifiMac>(m_mac);
-        const auto agreementEstablished =
-            isGcr ? apMac->IsGcrBaAgreementEstablishedWithAllMembers(recipient, tid)
-                  : m_mac->GetBaAgreementEstablishedAsOriginator(recipient, tid).has_value();
-        if (agreementEstablished && !IsInWindow(sequence, startSeq, bufferSize))
+        Mac48Address recipient = hdr.GetAddr1();
+        uint8_t tid = hdr.GetQosTid();
+
+        if (m_mac->GetBaAgreementEstablishedAsOriginator(recipient, tid) &&
+            !IsInWindow(sequence,
+                        GetBaStartingSequence(recipient, tid),
+                        GetBaBufferSize(recipient, tid)))
         {
             NS_LOG_DEBUG("Packet beyond the end of the current transmit window");
             return nullptr;
@@ -557,14 +530,10 @@ QosTxop::GetNextMpdu(uint8_t linkId,
                       GetBaBufferSize(peekedItem->GetOriginal()->GetHeader().GetAddr1(), tid)));
 
         // try A-MSDU aggregation if the MPDU does not contain an A-MSDU and does not already
-        // have a sequence number assigned (may be a retransmission) unless it is a concealed GCR
-        // MPDU:
-        if (auto apMac = DynamicCast<ApWifiMac>(m_mac);
-            m_mac->GetHtConfiguration() && !recipient.IsBroadcast() &&
-            !peekedItem->GetHeader().IsQosAmsdu() && !peekedItem->IsFragment() &&
-            (!peekedItem->HasSeqNoAssigned() ||
-             (IsGcr(m_mac, peekedItem->GetHeader()) &&
-              (apMac->GetGcrManager()->UseConcealment(peekedItem->GetHeader())))))
+        // have a sequence number assigned (may be a retransmission)
+        if (m_mac->GetHtConfiguration() && !recipient.IsBroadcast() &&
+            !peekedItem->GetHeader().IsQosAmsdu() && !peekedItem->HasSeqNoAssigned() &&
+            !peekedItem->IsFragment())
         {
             auto htFem = StaticCast<HtFrameExchangeManager>(qosFem);
             mpdu = htFem->GetMsduAggregator()->GetNextAmsdu(peekedItem, txParams, availableTime);
@@ -684,7 +653,6 @@ QosTxop::GotAddBaResponse(const MgtAddBaResponseHeader& respHdr, Mac48Address re
     if (respHdr.GetStatusCode().IsSuccess())
     {
         NS_LOG_DEBUG("block ack agreement established with " << recipient << " tid " << +tid);
-        m_baEstablishedCallback(recipient, tid);
         // A (destination, TID) pair is "blocked" (i.e., no more packets are sent) when an
         // Add BA Request is sent to the destination. However, when the Add BA Request timer
         // expires, the (destination, TID) pair is "unblocked" and packets to the destination are
@@ -692,9 +660,8 @@ QosTxop::GotAddBaResponse(const MgtAddBaResponseHeader& respHdr, Mac48Address re
         // already assigned waiting to be retransmitted (or being transmitted on another link)
         // when the Add BA Response is received. In this case, the starting sequence number shall
         // be set equal to the sequence number of such packet.
-        const auto queueRecipient = respHdr.GetGcrGroupAddress().value_or(recipient);
-        auto startingSeq = m_txMiddle->GetNextSeqNumberByTidAndAddress(tid, queueRecipient);
-        auto peekedItem = m_queue->PeekByTidAndAddress(tid, queueRecipient);
+        uint16_t startingSeq = m_txMiddle->GetNextSeqNumberByTidAndAddress(tid, recipient);
+        auto peekedItem = m_queue->PeekByTidAndAddress(tid, recipient);
         if (peekedItem && peekedItem->HasSeqNoAssigned())
         {
             startingSeq = peekedItem->GetHeader().GetSequenceNumber();
@@ -704,9 +671,7 @@ QosTxop::GotAddBaResponse(const MgtAddBaResponseHeader& respHdr, Mac48Address re
     else
     {
         NS_LOG_DEBUG("discard ADDBA response" << recipient);
-        m_baManager->NotifyOriginatorAgreementRejected(recipient,
-                                                       tid,
-                                                       respHdr.GetGcrGroupAddress());
+        m_baManager->NotifyOriginatorAgreementRejected(recipient, tid);
     }
 }
 
@@ -715,18 +680,14 @@ QosTxop::GotDelBaFrame(const MgtDelBaHeader* delBaHdr, Mac48Address recipient)
 {
     NS_LOG_FUNCTION(this << delBaHdr << recipient);
     NS_LOG_DEBUG("received DELBA frame from=" << recipient);
-    m_baManager->DestroyOriginatorAgreement(recipient,
-                                            delBaHdr->GetTid(),
-                                            delBaHdr->GetGcrGroupAddress());
+    m_baManager->DestroyOriginatorAgreement(recipient, delBaHdr->GetTid());
 }
 
 void
-QosTxop::NotifyOriginatorAgreementNoReply(const Mac48Address& recipient,
-                                          uint8_t tid,
-                                          std::optional<Mac48Address> gcrGroupAddr)
+QosTxop::NotifyOriginatorAgreementNoReply(const Mac48Address& recipient, uint8_t tid)
 {
-    NS_LOG_FUNCTION(this << recipient << tid << gcrGroupAddr.has_value());
-    m_baManager->NotifyOriginatorAgreementNoReply(recipient, tid, gcrGroupAddr);
+    NS_LOG_FUNCTION(this << recipient << tid);
+    m_baManager->NotifyOriginatorAgreementNoReply(recipient, tid);
 }
 
 void
@@ -772,37 +733,30 @@ QosTxop::GetBlockAckInactivityTimeout() const
 }
 
 void
-QosTxop::AddBaResponseTimeout(Mac48Address recipient,
-                              uint8_t tid,
-                              std::optional<Mac48Address> gcrGroupAddr)
+QosTxop::AddBaResponseTimeout(Mac48Address recipient, uint8_t tid)
 {
-    NS_LOG_FUNCTION(this << recipient << +tid << gcrGroupAddr.has_value());
+    NS_LOG_FUNCTION(this << recipient << +tid);
     // If agreement is still pending, ADDBA response is not received
-    auto agreement = m_baManager->GetAgreementAsOriginator(recipient, tid, gcrGroupAddr);
-    if (agreement && agreement->get().IsPending())
+    if (auto agreement = m_baManager->GetAgreementAsOriginator(recipient, tid);
+        agreement && agreement->get().IsPending())
     {
-        NotifyOriginatorAgreementNoReply(recipient, tid, gcrGroupAddr);
-        Simulator::Schedule(m_failedAddBaTimeout,
-                            &QosTxop::ResetBa,
-                            this,
-                            recipient,
-                            tid,
-                            gcrGroupAddr);
+        NotifyOriginatorAgreementNoReply(recipient, tid);
+        Simulator::Schedule(m_failedAddBaTimeout, &QosTxop::ResetBa, this, recipient, tid);
     }
 }
 
 void
-QosTxop::ResetBa(Mac48Address recipient, uint8_t tid, std::optional<Mac48Address> gcrGroupAddr)
+QosTxop::ResetBa(Mac48Address recipient, uint8_t tid)
 {
-    NS_LOG_FUNCTION(this << recipient << +tid << gcrGroupAddr.has_value());
+    NS_LOG_FUNCTION(this << recipient << +tid);
     // This function is scheduled when waiting for an ADDBA response. However,
     // before this function is called, a DELBA request may arrive, which causes
     // the agreement to be deleted. Hence, check if an agreement exists before
     // notifying that the agreement has to be reset.
-    auto agreement = m_baManager->GetAgreementAsOriginator(recipient, tid, gcrGroupAddr);
-    if (agreement && !agreement->get().IsEstablished())
+    if (auto agreement = m_baManager->GetAgreementAsOriginator(recipient, tid);
+        agreement && !agreement->get().IsEstablished())
     {
-        m_baManager->NotifyOriginatorAgreementReset(recipient, tid, gcrGroupAddr);
+        m_baManager->NotifyOriginatorAgreementReset(recipient, tid);
     }
 }
 

@@ -22,7 +22,7 @@ namespace ns3
 NS_LOG_COMPONENT_DEFINE("RraaWifiManager");
 
 /**
- * @brief hold per-remote-station state for RRAA Wifi manager.
+ * \brief hold per-remote-station state for RRAA Wifi manager.
  *
  * This struct extends from WifiRemoteStation struct to hold additional
  * information required by the RRAA Wifi manager
@@ -347,9 +347,9 @@ RraaWifiManager::DoGetDataTxVector(WifiRemoteStation* st, MHz_u allowedWidth)
     NS_LOG_FUNCTION(this << st << allowedWidth);
     auto station = static_cast<RraaWifiRemoteStation*>(st);
     auto channelWidth = GetChannelWidth(station);
-    if (channelWidth > MHz_u{20} && channelWidth != MHz_u{22})
+    if (channelWidth > 20 && channelWidth != 22)
     {
-        channelWidth = MHz_u{20};
+        channelWidth = 20;
     }
     CheckInit(station);
     WifiMode mode = GetSupported(station, station->m_rateIndex);
@@ -377,9 +377,9 @@ RraaWifiManager::DoGetRtsTxVector(WifiRemoteStation* st)
     NS_LOG_FUNCTION(this << st);
     auto station = static_cast<RraaWifiRemoteStation*>(st);
     auto channelWidth = GetChannelWidth(station);
-    if (channelWidth > MHz_u{20} && channelWidth != MHz_u{22})
+    if (channelWidth > 20 && channelWidth != 22)
     {
-        channelWidth = MHz_u{20};
+        channelWidth = 20;
     }
     WifiMode mode;
     if (!GetUseNonErpProtection())

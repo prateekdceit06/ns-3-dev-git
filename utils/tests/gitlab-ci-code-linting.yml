@@ -40,7 +40,7 @@ clang-tidy-18:
       clang cmake
       clang-tidy clang-tidy-18
       libboost-all-dev libeigen3-dev libgtk-3-dev libopenmpi-dev libsqlite3-dev
-      gsl-bin libgsl-dev libgsl28
+      gsl-bin libgsl-dev libgsl27
       git ssh
     - ./ns3 configure -d debug
       --enable-clang-tidy
@@ -126,15 +126,7 @@ cmake-format:
     - pip install pyyaml cmake cmake-format ninja
   script:
     - ./ns3 configure --enable-modules=core
-    - |
-      if (! ./ns3 build cmake-format-check) ; then
-        echo "Bad formatting detected in CMake files.";
-        echo "To fix the formatting issues, run the following command:";
-        echo "   $ ./ns3 build cmake-format";
-        echo "Note that it requires having cmake-format installed in your system.";
-        echo "You might need to run \"./ns3 configure\" after installing it.";
-        exit 1;
-      fi
+    - ./ns3 build cmake-format-check
   timeout: 1h
   interruptible: true
 
@@ -156,12 +148,3 @@ python-format-latest:
 python-format-3.8:
   extends: .python-format
   image: python:3.8
-
-# Markdown lint
-markdown-lint:
-  stage: .pre
-  image: ruby:slim
-  before_script:
-    - gem install mdl
-  script:
-    - mdl -s .mdl_style.rb .

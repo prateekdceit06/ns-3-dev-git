@@ -95,7 +95,7 @@ OmnetDataOutput::Output(DataCollector& dc)
     std::string fn = m_filePrefix + "-" + dc.GetRunLabel() + ".sca";
     scalarFile.open(fn, std::ios_base::out);
 
-    /// @todo add timestamp to the runlevel
+    /// \todo add timestamp to the runlevel
     scalarFile << "run " << dc.GetRunLabel() << std::endl;
     scalarFile << "attr experiment \"" << dc.GetExperimentLabel() << "\"" << std::endl;
     scalarFile << "attr strategy \"" << dc.GetStrategyLabel() << "\"" << std::endl;
@@ -157,31 +157,31 @@ OmnetDataOutput::OmnetOutputCallback::OutputStatistic(std::string context,
         name = "\"\"";
     }
     (*m_scalar) << "statistic " << context << " " << name << std::endl;
-    if (!std::isnan(statSum->getCount()))
+    if (!isNaN(statSum->getCount()))
     {
         (*m_scalar) << "field count " << statSum->getCount() << std::endl;
     }
-    if (!std::isnan(statSum->getSum()))
+    if (!isNaN(statSum->getSum()))
     {
         (*m_scalar) << "field sum " << statSum->getSum() << std::endl;
     }
-    if (!std::isnan(statSum->getMean()))
+    if (!isNaN(statSum->getMean()))
     {
         (*m_scalar) << "field mean " << statSum->getMean() << std::endl;
     }
-    if (!std::isnan(statSum->getMin()))
+    if (!isNaN(statSum->getMin()))
     {
         (*m_scalar) << "field min " << statSum->getMin() << std::endl;
     }
-    if (!std::isnan(statSum->getMax()))
+    if (!isNaN(statSum->getMax()))
     {
         (*m_scalar) << "field max " << statSum->getMax() << std::endl;
     }
-    if (!std::isnan(statSum->getSqrSum()))
+    if (!isNaN(statSum->getSqrSum()))
     {
         (*m_scalar) << "field sqrsum " << statSum->getSqrSum() << std::endl;
     }
-    if (!std::isnan(statSum->getStddev()))
+    if (!isNaN(statSum->getStddev()))
     {
         (*m_scalar) << "field stddev " << statSum->getStddev() << std::endl;
     }

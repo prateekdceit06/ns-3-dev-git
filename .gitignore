@@ -52,5 +52,6 @@ vcpkg/
 .cache/
 
 dot-git-backup
-src/quic
 
+src/quic
+quic_backup

@@ -1,0 +1,3 @@
+[submodule "src/quic"]
+	path = src/quic
+	url = https://github.com/prateekdceit06/quic-ns3.git
